@@ -24,21 +24,38 @@ public class SecurityConfiguration {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity
+        httpSecurity.
                 // defines which pages will be authorized
-                .authorizeHttpRequests().
+                authorizeHttpRequests().
+                // allow access to all static files (images,css,js)
                 requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll().
+                // The URL-s below are available for all users - logged in and anonymous.
                 requestMatchers("/", "/users/login", "/users/register", "users/login-error").permitAll().
+
+                // only for moderators
                 requestMatchers("/pages/moderators").hasRole(UserRoleEnum.MODERATOR.name()).
+
+                //only for admins
                 requestMatchers("/pages/admins").hasRole(UserRoleEnum.ADMIN.name()).
                 anyRequest().authenticated().
                 and().
+
+                // configure login with HTML form
                 formLogin().
                 loginPage("/users/login").
+
+                // the names of the username, password input fields in the custom login forms.
                 usernameParameter(UsernamePasswordAuthenticationFilter.SPRING_SECURITY_FORM_USERNAME_KEY).
-                passwordParameter(UsernamePasswordAuthenticationFilter.SPRING_SECURITY_FORM_PASSWORD_KEY)
-                .defaultSuccessUrl("/", true)
-                .failureForwardUrl("/users/login-error");
+                passwordParameter(UsernamePasswordAuthenticationFilter.SPRING_SECURITY_FORM_PASSWORD_KEY).
+                //where do we go after login
+                defaultSuccessUrl("/", true).//use true argument if you want to  go there,
+                // otherwise go to previous page
+                failureForwardUrl("/users/login-error").
+                and().
+                logout(). //configure logout
+                logoutUrl("users/logout").
+                logoutSuccessUrl("/").
+                invalidateHttpSession(true);
 
 
         return httpSecurity.build();
