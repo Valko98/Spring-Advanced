@@ -12,53 +12,48 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.DelegatingSecurityContextRepository;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 
 @Configuration
 public class SecurityConfiguration {
 
-    private final UserRepository userRepository;
-
-    public SecurityConfiguration(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
-
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           SecurityContextRepository securityContextRepository) throws Exception {
+        http.
                 // defines which pages will be authorized
-                authorizeHttpRequests().
-                // allow access to all static files (images,css,js)
-                requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll().
-                // The URL-s below are available for all users - logged in and anonymous.
-                requestMatchers("/", "/users/login", "/users/register", "users/login-error").permitAll().
-
+                        authorizeHttpRequests().
+                // allow access to all static files (images, CSS, js)
+                        requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll().
+                // the URL-s below are available for all users - logged in and anonymous
+                        requestMatchers("/", "/users/login", "/users/register", "/users/login-error").permitAll().
                 // only for moderators
-                requestMatchers("/pages/moderators").hasRole(UserRoleEnum.MODERATOR.name()).
-
-                //only for admins
-                requestMatchers("/pages/admins").hasRole(UserRoleEnum.ADMIN.name()).
+                        requestMatchers("/pages/moderators").hasRole(UserRoleEnum.MODERATOR.name()).
+                // only for admins
+                        requestMatchers("/pages/admins").hasRole(UserRoleEnum.ADMIN.name()).
                 anyRequest().authenticated().
                 and().
-
                 // configure login with HTML form
-                formLogin().
+                        formLogin().
                 loginPage("/users/login").
-
-                // the names of the username, password input fields in the custom login forms.
-                usernameParameter(UsernamePasswordAuthenticationFilter.SPRING_SECURITY_FORM_USERNAME_KEY).
+                // the names of the user name, password input fields in the custom login form
+                        usernameParameter(UsernamePasswordAuthenticationFilter.SPRING_SECURITY_FORM_USERNAME_KEY).
                 passwordParameter(UsernamePasswordAuthenticationFilter.SPRING_SECURITY_FORM_PASSWORD_KEY).
-                //where do we go after login
-                defaultSuccessUrl("/", true).//use true argument if you want to  go there,
-                // otherwise go to previous page
+                // where do we go after login
+                        defaultSuccessUrl("/").//use true argument if you always want to go there, otherwise go to previous page
                 failureForwardUrl("/users/login-error").
+                and().logout().//configure logout
+                logoutUrl("/users/logout").
+                logoutSuccessUrl("/").//go to homepage after logout
+                invalidateHttpSession(true).
                 and().
-                logout(). //configure logout
-                logoutUrl("users/logout").
-                logoutSuccessUrl("/").
-                invalidateHttpSession(true);
+                securityContext().
+                securityContextRepository(securityContextRepository);
 
-
-        return httpSecurity.build();
+        return http.build();
     }
 
     @Bean
@@ -67,7 +62,16 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    public UserDetailsService userDetailsService() {
+    public UserDetailsService userDetailsService(UserRepository userRepository) {
         return new ApplicationUserDetailsService(userRepository);
     }
+
+    @Bean
+    public SecurityContextRepository securityContextRepository() {
+        return new DelegatingSecurityContextRepository(
+                new RequestAttributeSecurityContextRepository(),
+                new HttpSessionSecurityContextRepository()
+        );
+    }
+
 }

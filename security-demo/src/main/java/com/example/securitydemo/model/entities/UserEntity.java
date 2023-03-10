@@ -24,6 +24,8 @@ public class UserEntity {
     @Column(nullable = false)
     private String lastName;
 
+    private String country;
+
     @Column(nullable = false)
     private String password;
 
@@ -32,6 +34,11 @@ public class UserEntity {
 
     public UserEntity setEmail(String email) {
         this.email = email;
+        return this;
+    }
+
+    public UserEntity setCountry(String country) {
+        this.country = country;
         return this;
     }
 
@@ -49,6 +56,7 @@ public class UserEntity {
         this.password = password;
         return this;
     }
+
 
     public UserEntity setRoles(List<UserRoleEntity> roles) {
         this.roles = roles;
